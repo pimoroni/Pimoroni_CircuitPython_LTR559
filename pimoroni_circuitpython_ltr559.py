@@ -102,7 +102,7 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     als_data_ch1 = RWBits(8, _LTR559_REG_ALS_DATA_CH1, 0)
 
     als_data_valid = RWBit(_LTR559_REG_ALS_PS_STATUS, 7)
-    als_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
+    als_data_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
 
     ps_data_ch0 = RW12BitAdapter(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
     ps_saturation = RWBit(_LTR559_REG_PS_DATA_SAT, 7)
