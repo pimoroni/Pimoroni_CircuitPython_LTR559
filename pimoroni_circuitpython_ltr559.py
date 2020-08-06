@@ -65,6 +65,69 @@ _LTR559_REG_ALS_THRESHOLD_UPPER = const(0x97)
 _LTR559_REG_ALS_THRESHOLD_LOWER = const(0x99)
 _LTR559_REG_INTERRUPT_PERSIST = const(0x9e)
 
+LTR559_INTERRUPT_MODE_OFF = const(0b00)
+LTR559_INTERRUPT_MODE_PS = const(0b01)
+LTR559_INTERRUPT_MODE_ALS = const(0b10)
+
+LTR559_LED_FREQ_30KHZ = const(0b000)
+LTR559_LED_FREQ_40KHZ = const(0b001)
+LTR559_LED_FREQ_50KHZ = const(0b010)
+LTR559_LED_FREQ_60KHZ = const(0b011)
+LTR559_LED_FREQ_70KHZ = const(0b100)
+LTR559_LED_FREQ_80KHZ = const(0b100)
+LTR559_LED_FREQ_90KHZ = const(0b110)
+LTR559_LED_FREQ_100KHZ = const(0b111)
+
+LTR559_LED_DUTY_25 = const(0b00)
+LTR559_LED_DUTY_50 = const(0b01)
+LTR559_LED_DUTY_75 = const(0b10)
+LTR559_LED_DUTY_100 = const(0b11)
+
+LTR559_LED_CURRENT_5MA = const(0b000)
+LTR559_LED_CURRENT_10MA = const(0b001)
+LTR559_LED_CURRENT_20MA = const(0b010)
+LTR559_LED_CURRENT_50MA = const(0b011)
+LTR559_LED_CURRENT_100MA = const(0b100)
+
+LTR559_PS_INTEGRATION_TIME_100MS = const(0b000)
+LTR559_PS_INTEGRATION_TIME_50MS = const(0b001)
+LTR559_PS_INTEGRATION_TIME_200MS = const(0b010)
+LTR559_PS_INTEGRATION_TIME_400MS = const(0b011)
+LTR559_PS_INTEGRATION_TIME_150MS = const(0b100)
+LTR559_PS_INTEGRATION_TIME_250MS = const(0b101)
+LTR559_PS_INTEGRATION_TIME_300MS = const(0b110)
+LTR559_PS_INTEGRATION_TIME_350MS = const(0b111)
+
+LTR559_PS_RATE_50MS = const(0b000)
+LTR559_PS_RATE_100MS = const(0b001)
+LTR559_PS_RATE_200MS = const(0b010)
+LTR559_PS_RATE_500MS = const(0b011)
+LTR559_PS_RATE_1000MS = const(0b100)
+LTR559_PS_RATE_2000MS = const(0b101)
+
+LTR559_ALS_GAIN_1X = const(0b000)
+LTR559_ALS_GAIN_2X = const(0b001)
+LTR559_ALS_GAIN_4X = const(0b010)
+LTR559_ALS_GAIN_8X = const(0b011)
+LTR559_ALS_GAIN_48X = const(0b110)
+LTR559_ALS_GAIN_96X = const(0b111)
+
+LTR559_ALS_RATE_50MS = const(0b000)
+LTR559_ALS_RATE_100MS = const(0b001)
+LTR559_ALS_RATE_200MS = const(0b010)
+LTR559_ALS_RATE_500MS = const(0b011)
+LTR559_ALS_RATE_1000MS = const(0b100)
+LTR559_ALS_RATE_2000MS = const(0b101)
+
+LTR559_ALS_INTEGRATION_TIME_100MS = const(0b000)
+LTR559_ALS_INTEGRATION_TIME_50MS = const(0b001)
+LTR559_ALS_INTEGRATION_TIME_200MS = const(0b010)
+LTR559_ALS_INTEGRATION_TIME_400MS = const(0b011)
+LTR559_ALS_INTEGRATION_TIME_150MS = const(0b100)
+LTR559_ALS_INTEGRATION_TIME_250MS = const(0b101)
+LTR559_ALS_INTEGRATION_TIME_300MS = const(0b110)
+LTR559_ALS_INTEGRATION_TIME_350MS = const(0b111)
+
 
 class RW12BitAdapter(RWBits):
     pass
@@ -85,7 +148,7 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     led_duty_cycle = RWBits(2, _LTR559_REG_PS_LED, 3)
     led_current_ma = RWBits(3, _LTR559_REG_PS_LED, 0)
 
-    pulse_count = RWBits(4, _LTR559_REG_PS_N_PULSES, 0)
+    led_pulse_count = RWBits(4, _LTR559_REG_PS_N_PULSES, 0)
 
     ps_rate_ms = RWBits(4, _LTR559_REG_PS_MEAS_RATE, 0)
 
@@ -127,7 +190,66 @@ class Pimoroni_LTR559:
     A driver for the LTR559 Proximity/Distance/Light sensor.
     """
 
-    def __init__(self, i2c, address=_LTR559_I2C_ADDR):
-      """Initialize the sensor."""
-      self._device = I2CDevice(i2c, address)
-      self._settings = DeviceControl(self._device)
+    def __init__(self, i2c, address=_LTR559_I2C_ADDR, enable_interrupts=False, interrupt_pin_polarity=1, timeout=5):
+        """Initialize the sensor."""
+        self._device = I2CDevice(i2c, address)
+        self.settings = DeviceControl(self._device)
+
+        self._als0 = 0
+        self._als1 = 0
+        self._ps0 = 0
+        self._lux = 0
+        self._ratio = 100
+
+        # Non default
+        self._gain = 4  # 4x gain = 0.25 to 16k lux
+        self._integration_time = 50
+
+        self._ch0_c = (17743, 42785, 5926, 0)
+        self._ch1_c = (-11059, 19548, -1185, 0)
+
+        if (self.settings.part_number, self.settings.revision) != (_LTR559_PART_ID, _LTR559_REVISION_ID):
+            raise RuntimeError("LTR559 not found")
+
+        self.settings.sw_reset = 1
+
+        t_start = time.monotonic()
+        while time.monotonic() - t_start < timeout:
+            if self.settings.sw_reset == 0:
+                break
+            time.sleep(0.05)
+
+        if self.settings.sw_reset:
+            raise RuntimeError("Timeout waiting for software reset.")
+
+        # Interrupt regfister must be set before device is switched to active mode
+        # see datasheet page 12/40, note #2
+        if enable_interrupts:
+            self.settings.interrupt_mode = LTR559_INTERRUPT_MODE_PS | LTR559_INTERRUPT_MODE_ALS
+            self.settings.interrupt_polarity = interrupt_pin_polarity
+
+        # FIXME use datasheet defaults or document
+        # No need to run the proximity LED at 100mA, so we pick 50 instead.
+        # Tests suggest this works pretty well.
+        self.settings.led_current_ma = LTR559_LED_CURRENT_50MA
+        self.settings.led_duty_cycle = LTR559_LED_DUTY_100
+        self.settings.led_pulse_freq_khz = LTR559_LED_FREQ_30KHZ
+
+        # 1 pulse is the default value
+        self.settings.led_pulse_count = 1
+
+        self.settings.ps_active = 1
+        self.settings.ps_saturation_indicator_enable = 1
+
+        self.settings.ps_rate_ms = LTR559_PS_RATE_50MS
+        self.settings.als_repeat_rate_ms = LTR559_ALS_RATE_50MS
+        self.settings.als_integration_time_ms = LTR559_ALS_INTEGRATION_TIME_50MS
+
+        self.settings.als_threshold_lower = 0x0000
+        self.settings.als_threshold_upper = 0xffff
+
+        self.settings.ps_threshold_lower = 0x0000
+        self.settings.ps_threshold_upper = 0xffff
+
+        self.settings.ps_offset = 0
+    
