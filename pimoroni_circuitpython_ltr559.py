@@ -32,7 +32,7 @@ Implementation Notes
 import time
 from adafruit_bus_device.i2c_device import I2CDevice
 from adafruit_register.i2c_struct import Struct
-from adafruit_register.i2c_bits import RWBits
+from adafruit_register.i2c_bits import RWBits, ROBits
 from adafruit_register.i2c_bit import RWBit
 from micropython import const
 
@@ -58,12 +58,16 @@ _LTR559_REG_ALS_PS_STATUS = const(0x8c)
 _LTR559_REG_PS_DATA_CH0 = const(0x8d)
 _LTR559_REG_PS_DATA_SAT = const(0x8e)
 _LTR559_REG_INTERRUPT = const(0x8f)
-_LTR559_REG_PS_THRESHOLD_LOWER = const(0x90)
-_LTR559_REG_PS_THRESHOLD_UPPER = const(0x92)
+_LTR559_REG_PS_THRESHOLD_UPPER = const(0x90)
+_LTR559_REG_PS_THRESHOLD_LOWER = const(0x92)
 _LTR559_REG_PS_OFFSET = const(0x94)
-_LTR559_REG_ALS_THRESHOLD_LOWER = const(0x97)
-_LTR559_REG_ALS_THRESHOLD_UPPER = const(0x99)
+_LTR559_REG_ALS_THRESHOLD_UPPER = const(0x97)
+_LTR559_REG_ALS_THRESHOLD_LOWER = const(0x99)
 _LTR559_REG_INTERRUPT_PERSIST = const(0x9e)
+
+
+class RW12BitAdapter(RWBits):
+    pass
 
 
 class DeviceControl:  # pylint: disable-msg=too-few-public-methods
@@ -72,10 +76,10 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
 
     als_gain = RWBits(3, _LTR559_REG_ALS_CONTROL, 2)
     sw_reset = RWBit(_LTR559_REG_ALS_CONTROL, 1)
-    mode = RWBit(_LTR559_REG_ALS_CONTROL, 1)
+    als_mode = RWBit(_LTR559_REG_ALS_CONTROL, 0)
 
-    saturation_indicator_enable = RWBit(_LTR559_REG_PS_CONTROL, 5)
-    active = RWBits(2, _LTR559_REG_PS_CONTROL, 0)
+    ps_saturation_indicator_enable = RWBit(_LTR559_REG_PS_CONTROL, 5)
+    ps_active = RWBits(2, _LTR559_REG_PS_CONTROL, 0)
 
     led_pulse_freq_khz = RWBits(3, _LTR559_REG_PS_LED, 5)
     led_duty_cycle = RWBits(2, _LTR559_REG_PS_LED, 3)
@@ -92,7 +96,7 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     part_number = RWBits(4, _LTR559_REG_PART_ID, 4)
     revision = RWBits(4, _LTR559_REG_PART_ID, 0)
 
-    manufacturer_id = RWBits(8, _LTR559_REG_MANUFACTURER_ID, 0)
+    manufacturer_id = ROBits(8, _LTR559_REG_MANUFACTURER_ID, 0)
 
     als_data_ch0 = RWBits(8, _LTR559_REG_ALS_DATA_CH0, 0)
     als_data_ch1 = RWBits(8, _LTR559_REG_ALS_DATA_CH1, 0)
@@ -100,19 +104,19 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     als_data_valid = RWBit(_LTR559_REG_ALS_PS_STATUS, 7)
     als_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
 
-    ps_data_ch0 = RWBits(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)                  # 0xFF0F
+    ps_data_ch0 = RW12BitAdapter(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
     ps_saturation = RWBit(_LTR559_REG_PS_DATA_SAT, 7)
 
     interrupt_polarity = RWBit(_LTR559_REG_INTERRUPT, 2)
     interrupt_mode = RWBits(2, _LTR559_REG_INTERRUPT, 0)
 
-    ps_threshold_lower = RWBits(16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2)    # 0xFF0F
-    ps_threshold_upper = RWBits(16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2)    # 0xFF0F
+    ps_threshold_lower = RW12BitAdapter(16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2)
+    ps_threshold_upper = RW12BitAdapter(16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2)
 
-    ps_offset = RWBits(16, _LTR559_REG_PS_OFFSET, 0, register_width=2)                      # 0x03FF
+    ps_offset = RWBits(10, _LTR559_REG_PS_OFFSET, 0, register_width=2)
 
-    als_threshold_lower = RWBits(16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2)  # 0xffff
-    als_threshold_upper = RWBits(16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2)  # 0xffff
+    als_threshold_lower = RWBits(16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2)
+    als_threshold_upper = RWBits(16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2)
 
     ps_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 0)
     als_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 4)
