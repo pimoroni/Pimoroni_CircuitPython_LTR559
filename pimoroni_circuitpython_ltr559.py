@@ -54,16 +54,16 @@ _LTR559_REG_PART_ID = const(0x86)
 _LTR559_REG_MANUFACTURER_ID = const(0x87)
 _LTR559_REG_ALS_DATA_CH0 = const(0x88)
 _LTR559_REG_ALS_DATA_CH1 = const(0x89)
-_LTR559_REG_ALS_PS_STATUS = const(0x8c)
-_LTR559_REG_PS_DATA_CH0 = const(0x8d)
-_LTR559_REG_PS_DATA_SAT = const(0x8e)
-_LTR559_REG_INTERRUPT = const(0x8f)
+_LTR559_REG_ALS_PS_STATUS = const(0x8C)
+_LTR559_REG_PS_DATA_CH0 = const(0x8D)
+_LTR559_REG_PS_DATA_SAT = const(0x8E)
+_LTR559_REG_INTERRUPT = const(0x8F)
 _LTR559_REG_PS_THRESHOLD_UPPER = const(0x90)
 _LTR559_REG_PS_THRESHOLD_LOWER = const(0x92)
 _LTR559_REG_PS_OFFSET = const(0x94)
 _LTR559_REG_ALS_THRESHOLD_UPPER = const(0x97)
 _LTR559_REG_ALS_THRESHOLD_LOWER = const(0x99)
-_LTR559_REG_INTERRUPT_PERSIST = const(0x9e)
+_LTR559_REG_INTERRUPT_PERSIST = const(0x9E)
 
 LTR559_INTERRUPT_MODE_OFF = const(0b00)
 LTR559_INTERRUPT_MODE_PS = const(0b01)
@@ -173,13 +173,21 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     interrupt_polarity = RWBit(_LTR559_REG_INTERRUPT, 2)
     interrupt_mode = RWBits(2, _LTR559_REG_INTERRUPT, 0)
 
-    ps_threshold_lower = RW12BitAdapter(16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2)
-    ps_threshold_upper = RW12BitAdapter(16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2)
+    ps_threshold_lower = RW12BitAdapter(
+        16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2
+    )
+    ps_threshold_upper = RW12BitAdapter(
+        16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2
+    )
 
     ps_offset = RWBits(10, _LTR559_REG_PS_OFFSET, 0, register_width=2)
 
-    als_threshold_lower = RWBits(16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2)
-    als_threshold_upper = RWBits(16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2)
+    als_threshold_lower = RWBits(
+        16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2
+    )
+    als_threshold_upper = RWBits(
+        16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2
+    )
 
     ps_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 0)
     als_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 4)
@@ -190,7 +198,14 @@ class Pimoroni_LTR559:
     A driver for the LTR559 Proximity/Distance/Light sensor.
     """
 
-    def __init__(self, i2c, address=_LTR559_I2C_ADDR, enable_interrupts=False, interrupt_pin_polarity=1, timeout=5):
+    def __init__(
+        self,
+        i2c,
+        address=_LTR559_I2C_ADDR,
+        enable_interrupts=False,
+        interrupt_pin_polarity=1,
+        timeout=5,
+    ):
         """Initialize the sensor."""
         self._device = I2CDevice(i2c, address)
         self.settings = DeviceControl(self._device)
@@ -208,7 +223,10 @@ class Pimoroni_LTR559:
         self._ch0_c = (17743, 42785, 5926, 0)
         self._ch1_c = (-11059, 19548, -1185, 0)
 
-        if (self.settings.part_number, self.settings.revision) != (_LTR559_PART_ID, _LTR559_REVISION_ID):
+        if (self.settings.part_number, self.settings.revision) != (
+            _LTR559_PART_ID,
+            _LTR559_REVISION_ID,
+        ):
             raise RuntimeError("LTR559 not found")
 
         self.settings.sw_reset = 1
@@ -225,7 +243,9 @@ class Pimoroni_LTR559:
         # Interrupt regfister must be set before device is switched to active mode
         # see datasheet page 12/40, note #2
         if enable_interrupts:
-            self.settings.interrupt_mode = LTR559_INTERRUPT_MODE_PS | LTR559_INTERRUPT_MODE_ALS
+            self.settings.interrupt_mode = (
+                LTR559_INTERRUPT_MODE_PS | LTR559_INTERRUPT_MODE_ALS
+            )
             self.settings.interrupt_polarity = interrupt_pin_polarity
 
         # FIXME use datasheet defaults or document
@@ -246,10 +266,9 @@ class Pimoroni_LTR559:
         self.settings.als_integration_time_ms = LTR559_ALS_INTEGRATION_TIME_50MS
 
         self.settings.als_threshold_lower = 0x0000
-        self.settings.als_threshold_upper = 0xffff
+        self.settings.als_threshold_upper = 0xFFFF
 
         self.settings.ps_threshold_lower = 0x0000
-        self.settings.ps_threshold_upper = 0xffff
+        self.settings.ps_threshold_upper = 0xFFFF
 
         self.settings.ps_offset = 0
-    
