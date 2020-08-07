@@ -23,14 +23,13 @@ Table of Contents
 .. toctree::
     :caption: Tutorials
 
-.. todo:: Add any Learn guide links here. If there are none, then simply delete this todo and leave
-    the toctree above for use later.
+    Nothing to see here!
 
 .. toctree::
     :caption: Related Products
 
-.. todo:: Add any product links here. If there are none, then simply delete this todo and leave
-    the toctree above for use later.
+    Enviro+ FeatherWing <https://shop.pimoroni.com/products/enviro-plus-featherwing>
+    LTR559 Breakout <https://shop.pimoroni.com/products/ltr-559-light-proximity-sensor-breakout>
 
 .. toctree::
     :caption: Other Links
@@ -38,10 +37,7 @@ Table of Contents
     Download <https://github.com/pimoroni/Pimoroni_CircuitPython_LTR559/releases/latest>
     CircuitPython Reference Documentation <https://circuitpython.readthedocs.io>
     CircuitPython Support Forum <https://forums.adafruit.com/viewforum.php?f=60>
-    Discord Chat <https://adafru.it/discord>
-    Adafruit Learning System <https://learn.adafruit.com>
-    Adafruit Blog <https://blog.adafruit.com>
-    Adafruit Store <https://www.adafruit.com>
+    Pimoroni Learning System <https://learn.pimoroni.com>
 
 Indices and tables
 ==================

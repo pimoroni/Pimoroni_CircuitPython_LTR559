@@ -50,7 +50,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "Pimoroni Pimoroni_CircuitPython_LTR559 Library"
+project = "Pimoroni_CircuitPython_LTR559 Library"
 copyright = "2020 Philip Howard"
 author = "Philip Howard"
 
@@ -132,7 +132,7 @@ html_static_path = ["_static"]
 html_favicon = "_static/favicon.ico"
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "PimoroniPimoroni_circuitpython_ltr559Librarydoc"
+htmlhelp_basename = "Pimoroni_circuitpython_ltr559Librarydoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -153,8 +153,8 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "PimoroniPimoroni_CircuitPython_LTR559Library.tex",
-        "PimoroniPimoroni_CircuitPython_LTR559 Library Documentation",
+        "Pimoroni_CircuitPython_LTR559Library.tex",
+        "iPimoroni_CircuitPython_LTR559 Library Documentation",
         author,
         "manual",
     ),
@@ -167,8 +167,8 @@ latex_documents = [
 man_pages = [
     (
         master_doc,
-        "PimoroniPimoroni_CircuitPython_LTR559library",
-        "Pimoroni Pimoroni_CircuitPython_LTR559 Library Documentation",
+        "Pimoroni_CircuitPython_LTR559library",
+        "Pimoroni_CircuitPython_LTR559 Library Documentation",
         [author],
         1,
     ),
@@ -182,11 +182,11 @@ man_pages = [
 texinfo_documents = [
     (
         master_doc,
-        "PimoroniPimoroni_CircuitPython_LTR559Library",
-        "Pimoroni Pimoroni_CircuitPython_LTR559 Library Documentation",
+        "Pimoroni_CircuitPython_LTR559Library",
+        "Pimoroni_CircuitPython_LTR559 Library Documentation",
         author,
-        "PimoroniPimoroni_CircuitPython_LTR559Library",
-        "One line description of project.",
+        "Pimoroni_CircuitPython_LTR559Library",
+        "Python driver for the LTR550 light and proximity sensor.",
         "Miscellaneous",
     ),
 ]
