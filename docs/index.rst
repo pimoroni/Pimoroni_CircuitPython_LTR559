@@ -21,11 +21,6 @@ Table of Contents
     api
 
 .. toctree::
-    :caption: Tutorials
-
-    Nothing to see here!
-
-.. toctree::
     :caption: Related Products
 
     Enviro+ FeatherWing <https://shop.pimoroni.com/products/enviro-plus-featherwing>
