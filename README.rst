@@ -62,7 +62,20 @@ To install in a virtual environment in your current project:
 Usage Example
 =============
 
-.. todo:: Add a quick, simple example. It and other examples should live in the examples folder and be included in docs/examples.rst.
+.. code-block:: python
+
+    import time
+    from board import SCL, SDA
+    from busio import I2C
+    from pimoroni_circuitpython_ltr559 import Pimoroni_LTR559
+
+    bus = I2C(SCL, SDA)
+    ltr559 = Pimoroni_LTR559(bus)
+
+    while True:
+        print(ltr559.lux)   # Get Lux value from light sensor
+        print(ltr559.prox)  # Get Proximity value from proximity sensor
+        time.sleep(1.0)
 
 Contributing
 ============
