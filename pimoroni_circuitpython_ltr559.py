@@ -16,24 +16,29 @@ Implementation Notes
 
 **Hardware:**
 
-.. todo:: Add links to any specific hardware product page(s), or category page(s). Use unordered list & hyperlink rST
-   inline format: "* `Link Text <url>`_"
+Written to support Pimoroni's LTR559 breakout and Enviro+ FeatherWing.
+
+* Pimoroni LTR559 Breakout Garden Breakout:
+  https://shop.pimoroni.com/products/ltr-559-light-proximity-sensor-breakout
+
+* Pimoroni Enviro+ FeatherWing:
+  https://shop.pimoroni.com/products/enviro-plus-featherwing
 
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
 
-.. todo:: Uncomment or remove the Bus Device and/or the Register library dependencies based on the library's use of either.
+* Adafruit's Bus Device library:
+  https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
 
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Register library:
+  https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 import time
 from adafruit_bus_device.i2c_device import I2CDevice
-from adafruit_register.i2c_struct import Struct
 from adafruit_register.i2c_bits import RWBits, ROBits
-from adafruit_register.i2c_bit import RWBit
+from adafruit_register.i2c_bit import RWBit, ROBit
 from micropython import const
 
 __version__ = "0.0.1"
@@ -52,8 +57,8 @@ _LTR559_REG_PS_MEAS_RATE = const(0x84)
 _LTR559_REG_ALS_MEAS_RATE = const(0x85)
 _LTR559_REG_PART_ID = const(0x86)
 _LTR559_REG_MANUFACTURER_ID = const(0x87)
-_LTR559_REG_ALS_DATA_CH0 = const(0x88)
-_LTR559_REG_ALS_DATA_CH1 = const(0x89)
+_LTR559_REG_ALS_DATA_CH1 = const(0x88)
+_LTR559_REG_ALS_DATA_CH0 = const(0x8A)
 _LTR559_REG_ALS_PS_STATUS = const(0x8C)
 _LTR559_REG_PS_DATA_CH0 = const(0x8D)
 _LTR559_REG_PS_DATA_SAT = const(0x8E)
@@ -129,71 +134,77 @@ LTR559_ALS_INTEGRATION_TIME_300MS = const(0b110)
 LTR559_ALS_INTEGRATION_TIME_350MS = const(0b111)
 
 
-class RW12BitAdapter(RWBits):
-    pass
+class ALSControl:  # pylint: disable-msg=too-few-public-methods
+    """Control registers for the LTR559 light sensor"""
 
-
-class DeviceControl:  # pylint: disable-msg=too-few-public-methods
     def __init__(self, i2c):
         self.i2c_device = i2c  # self.i2c_device required by RWBit class
 
-    als_gain = RWBits(3, _LTR559_REG_ALS_CONTROL, 2)
-    sw_reset = RWBit(_LTR559_REG_ALS_CONTROL, 1)
-    als_mode = RWBit(_LTR559_REG_ALS_CONTROL, 0)
+    gain = RWBits(3, _LTR559_REG_ALS_CONTROL, 2)
+    mode = RWBit(_LTR559_REG_ALS_CONTROL, 0)
+    integration_time_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 3)
+    repeat_rate_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 0)
 
-    ps_saturation_indicator_enable = RWBit(_LTR559_REG_PS_CONTROL, 5)
-    ps_active = RWBits(2, _LTR559_REG_PS_CONTROL, 0)
+    data_ch0 = RWBits(16, _LTR559_REG_ALS_DATA_CH0, 0, register_width=2)
+    data_ch1 = RWBits(16, _LTR559_REG_ALS_DATA_CH1, 0, register_width=2)
+
+    threshold_lower = RWBits(16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2)
+    threshold_upper = RWBits(16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2)
+
+    interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 4)
+
+    data_valid = RWBit(_LTR559_REG_ALS_PS_STATUS, 7)
+    data_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
+
+    new_data = ROBit(_LTR559_REG_ALS_PS_STATUS, 2)
+    interrupt_active = ROBit(_LTR559_REG_ALS_PS_STATUS, 3)
+
+
+class PSControl:  # pylint: disable-msg=too-few-public-methods
+    """Control registers for the LTR559 proximity sensor"""
+
+    def __init__(self, i2c):
+        self.i2c_device = i2c  # self.i2c_device required by RWBit class
+
+    saturation_indicator_enable = RWBit(_LTR559_REG_PS_CONTROL, 5)
+    active = RWBits(2, _LTR559_REG_PS_CONTROL, 0)
+    rate_ms = RWBits(4, _LTR559_REG_PS_MEAS_RATE, 0)
+
+    data_ch0 = RWBits(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
+    saturation = RWBit(_LTR559_REG_PS_DATA_SAT, 7)
+
+    threshold_lower = RWBits(16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2)
+    threshold_upper = RWBits(16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2)
+
+    offset = RWBits(10, _LTR559_REG_PS_OFFSET, 0, register_width=2)
+
+    interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 0)
+
+    new_data = ROBit(_LTR559_REG_ALS_PS_STATUS, 0)
+    interrupt_active = ROBit(_LTR559_REG_ALS_PS_STATUS, 1)
+
+
+class DeviceControl:  # pylint: disable-msg=too-few-public-methods
+    """General LTR559 control registers"""
+
+    def __init__(self, i2c):
+        self.i2c_device = i2c  # self.i2c_device required by RWBit class
+
+    sw_reset = RWBit(_LTR559_REG_ALS_CONTROL, 1)
+    part_number = RWBits(4, _LTR559_REG_PART_ID, 4)
+    revision = RWBits(4, _LTR559_REG_PART_ID, 0)
+    manufacturer_id = ROBits(8, _LTR559_REG_MANUFACTURER_ID, 0)
 
     led_pulse_freq_khz = RWBits(3, _LTR559_REG_PS_LED, 5)
     led_duty_cycle = RWBits(2, _LTR559_REG_PS_LED, 3)
     led_current_ma = RWBits(3, _LTR559_REG_PS_LED, 0)
-
     led_pulse_count = RWBits(4, _LTR559_REG_PS_N_PULSES, 0)
-
-    ps_rate_ms = RWBits(4, _LTR559_REG_PS_MEAS_RATE, 0)
-
-    als_integration_time_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 3)
-
-    als_repeat_rate_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 0)
-
-    part_number = RWBits(4, _LTR559_REG_PART_ID, 4)
-    revision = RWBits(4, _LTR559_REG_PART_ID, 0)
-
-    manufacturer_id = ROBits(8, _LTR559_REG_MANUFACTURER_ID, 0)
-
-    als_data_ch0 = RWBits(8, _LTR559_REG_ALS_DATA_CH0, 0)
-    als_data_ch1 = RWBits(8, _LTR559_REG_ALS_DATA_CH1, 0)
-
-    als_data_valid = RWBit(_LTR559_REG_ALS_PS_STATUS, 7)
-    als_data_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
-
-    ps_data_ch0 = RW12BitAdapter(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
-    ps_saturation = RWBit(_LTR559_REG_PS_DATA_SAT, 7)
 
     interrupt_polarity = RWBit(_LTR559_REG_INTERRUPT, 2)
     interrupt_mode = RWBits(2, _LTR559_REG_INTERRUPT, 0)
 
-    ps_threshold_lower = RW12BitAdapter(
-        16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2
-    )
-    ps_threshold_upper = RW12BitAdapter(
-        16, _LTR559_REG_PS_THRESHOLD_UPPER, 0, register_width=2
-    )
 
-    ps_offset = RWBits(10, _LTR559_REG_PS_OFFSET, 0, register_width=2)
-
-    als_threshold_lower = RWBits(
-        16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2
-    )
-    als_threshold_upper = RWBits(
-        16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2
-    )
-
-    ps_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 0)
-    als_interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 4)
-
-
-class Pimoroni_LTR559:
+class Pimoroni_LTR559:  # pylint: disable-msg=too-many-instance-attributes
     """
     A driver for the LTR559 Proximity/Distance/Light sensor.
     """
@@ -205,10 +216,12 @@ class Pimoroni_LTR559:
         enable_interrupts=False,
         interrupt_pin_polarity=1,
         timeout=5,
-    ):
+    ):  # pylint: disable-msg=too-many-arguments
         """Initialize the sensor."""
         self._device = I2CDevice(i2c, address)
         self.settings = DeviceControl(self._device)
+        self.light = ALSControl(self._device)
+        self.proximity = PSControl(self._device)
 
         self._als0 = 0
         self._als1 = 0
@@ -216,9 +229,27 @@ class Pimoroni_LTR559:
         self._lux = 0
         self._ratio = 100
 
-        # Non default
-        self._gain = 4  # 4x gain = 0.25 to 16k lux
+        self._gain = 4
         self._integration_time = 50
+
+        self._lookup_light_gain = {
+            0b000: 1,
+            0b001: 2,
+            0b010: 4,
+            0b011: 8,
+            0b110: 48,
+            0b111: 96,
+        }
+        self._lookup_light_integration_time = {
+            0b000: 100,
+            0b001: 50,
+            0b010: 200,
+            0b011: 400,
+            0b100: 150,
+            0b101: 250,
+            0b110: 300,
+            0b111: 350,
+        }
 
         self._ch0_c = (17743, 42785, 5926, 0)
         self._ch1_c = (-11059, 19548, -1185, 0)
@@ -248,7 +279,6 @@ class Pimoroni_LTR559:
             )
             self.settings.interrupt_polarity = interrupt_pin_polarity
 
-        # FIXME use datasheet defaults or document
         # No need to run the proximity LED at 100mA, so we pick 50 instead.
         # Tests suggest this works pretty well.
         self.settings.led_current_ma = LTR559_LED_CURRENT_50MA
@@ -258,17 +288,97 @@ class Pimoroni_LTR559:
         # 1 pulse is the default value
         self.settings.led_pulse_count = 1
 
-        self.settings.ps_active = 1
-        self.settings.ps_saturation_indicator_enable = 1
+        self.proximity.active = 0b11
+        self.proximity.saturation_indicator_enable = 1
+        self.proximity.rate_ms = LTR559_PS_RATE_50MS
 
-        self.settings.ps_rate_ms = LTR559_PS_RATE_50MS
-        self.settings.als_repeat_rate_ms = LTR559_ALS_RATE_50MS
-        self.settings.als_integration_time_ms = LTR559_ALS_INTEGRATION_TIME_50MS
+        self.light.repeat_rate_ms = LTR559_ALS_RATE_50MS
+        self.light.integration_time_ms = LTR559_ALS_INTEGRATION_TIME_50MS
 
-        self.settings.als_threshold_lower = 0x0000
-        self.settings.als_threshold_upper = 0xFFFF
+        self.light.threshold_lower = 0x0000
+        self.light.threshold_upper = 0xFFFF
 
-        self.settings.ps_threshold_lower = 0x0000
-        self.settings.ps_threshold_upper = 0xFFFF
+        self.light.mode = 1
+        self.light.gain = LTR559_ALS_GAIN_4X
 
-        self.settings.ps_offset = 0
+        self.proximity.threshold_lower = 0x0000
+        self.proximity.ps_threshold_upper = 0xFFFF
+
+        self.proximity.offset = 0
+
+    @property
+    def lux(self):
+        """The light sensor lux value.
+
+        Updates the sensor if new data is available or the interrupt has fired.
+
+        """
+        self.update_sensor()
+        return self._lux
+
+    @property
+    def prox(self):
+        """The proximity sensor value.
+
+        Updates the sensor if new data is available or the interrupt has fired.
+
+        """
+        self.update_sensor()
+        return self._ps0
+
+    def get_lux(self):
+        """Get the light sensor lux value."""
+        return self.lux
+
+    def get_proximity(self):
+        """Get the proximity sensor value."""
+        return self.prox
+
+    def update_sensor(self):
+        """Updates the sensor.
+
+        Calculates and store lux and proximity values if new data is available.
+
+        """
+        als_int = self.light.new_data or self.light.interrupt_active
+        ps_int = self.proximity.new_data or self.proximity.interrupt_active
+
+        if ps_int:
+            self._ps0 = self.proximity.data_ch0
+
+        if als_int:
+            self._als0 = self.light.data_ch0
+            self._als1 = self.light.data_ch1
+
+            self._ratio = (
+                self._als1 * 100 / (self._als1 + self._als0)
+                if self._als0 + self._als1 > 0
+                else 101
+            )
+
+            if self._ratio < 45:
+                ch_idx = 0
+            elif self._ratio < 64:
+                ch_idx = 1
+            elif self._ratio < 85:
+                ch_idx = 2
+            else:
+                ch_idx = 3
+
+            gain = self._lookup_light_gain[self.light.data_gain]
+            integration_time = self._lookup_light_integration_time[
+                self.light.integration_time_ms
+            ]
+
+            self._gain = gain
+            self._integration_time = integration_time
+
+            try:
+                self._lux = (self._als0 * self._ch0_c[ch_idx]) - (
+                    self._als1 * self._ch1_c[ch_idx]
+                )
+                self._lux /= integration_time / 100.0
+                self._lux /= gain
+                self._lux /= 10000.0
+            except ZeroDivisionError:
+                self._lux = 0
