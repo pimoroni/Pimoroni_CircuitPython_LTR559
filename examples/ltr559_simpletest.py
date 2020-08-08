@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2020 David Glaude
+#
+# SPDX-License-Identifier: Unlicense
 """Simple example of the LTR559 library."""
 import time
 import board
