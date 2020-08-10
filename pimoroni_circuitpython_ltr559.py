@@ -145,16 +145,15 @@ class ALSControl:  # pylint: disable-msg=too-few-public-methods
     integration_time_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 3)
     repeat_rate_ms = RWBits(3, _LTR559_REG_ALS_MEAS_RATE, 0)
 
-    data_ch0 = RWBits(16, _LTR559_REG_ALS_DATA_CH0, 0, register_width=2)
-    data_ch1 = RWBits(16, _LTR559_REG_ALS_DATA_CH1, 0, register_width=2)
+    data = ROBits(32, _LTR559_REG_ALS_DATA_CH1, 0, register_width=4)
 
     threshold_lower = RWBits(16, _LTR559_REG_ALS_THRESHOLD_LOWER, 0, register_width=2)
     threshold_upper = RWBits(16, _LTR559_REG_ALS_THRESHOLD_UPPER, 0, register_width=2)
 
     interrupt_persist = RWBits(4, _LTR559_REG_INTERRUPT_PERSIST, 4)
 
-    data_valid = RWBit(_LTR559_REG_ALS_PS_STATUS, 7)
-    data_gain = RWBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
+    data_valid = ROBit(_LTR559_REG_ALS_PS_STATUS, 7)
+    data_gain = ROBits(3, _LTR559_REG_ALS_PS_STATUS, 4)
 
     new_data = ROBit(_LTR559_REG_ALS_PS_STATUS, 2)
     interrupt_active = ROBit(_LTR559_REG_ALS_PS_STATUS, 3)
@@ -170,7 +169,7 @@ class PSControl:  # pylint: disable-msg=too-few-public-methods
     active = RWBits(2, _LTR559_REG_PS_CONTROL, 0)
     rate_ms = RWBits(4, _LTR559_REG_PS_MEAS_RATE, 0)
 
-    data_ch0 = RWBits(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
+    data_ch0 = ROBits(16, _LTR559_REG_PS_DATA_CH0, 0, register_width=2)
     saturation = RWBit(_LTR559_REG_PS_DATA_SAT, 7)
 
     threshold_lower = RWBits(16, _LTR559_REG_PS_THRESHOLD_LOWER, 0, register_width=2)
@@ -191,8 +190,8 @@ class DeviceControl:  # pylint: disable-msg=too-few-public-methods
         self.i2c_device = i2c  # self.i2c_device required by RWBit class
 
     sw_reset = RWBit(_LTR559_REG_ALS_CONTROL, 1)
-    part_number = RWBits(4, _LTR559_REG_PART_ID, 4)
-    revision = RWBits(4, _LTR559_REG_PART_ID, 0)
+    part_number = ROBits(4, _LTR559_REG_PART_ID, 4)
+    revision = ROBits(4, _LTR559_REG_PART_ID, 0)
     manufacturer_id = ROBits(8, _LTR559_REG_MANUFACTURER_ID, 0)
 
     led_pulse_freq_khz = RWBits(3, _LTR559_REG_PS_LED, 5)
@@ -271,7 +270,7 @@ class Pimoroni_LTR559:  # pylint: disable-msg=too-many-instance-attributes
         if self.settings.sw_reset:
             raise RuntimeError("Timeout waiting for software reset.")
 
-        # Interrupt regfister must be set before device is switched to active mode
+        # Interrupt register must be set before device is switched to active mode
         # see datasheet page 12/40, note #2
         if enable_interrupts:
             self.settings.interrupt_mode = (
@@ -302,7 +301,7 @@ class Pimoroni_LTR559:  # pylint: disable-msg=too-many-instance-attributes
         self.light.gain = LTR559_ALS_GAIN_4X
 
         self.proximity.threshold_lower = 0x0000
-        self.proximity.ps_threshold_upper = 0xFFFF
+        self.proximity.threshold_upper = 0xFFFF
 
         self.proximity.offset = 0
 
@@ -347,8 +346,9 @@ class Pimoroni_LTR559:  # pylint: disable-msg=too-many-instance-attributes
             self._ps0 = self.proximity.data_ch0
 
         if als_int:
-            self._als0 = self.light.data_ch0
-            self._als1 = self.light.data_ch1
+            als_data = self.light.data
+            self._als0 = (als_data >> 16) & 0xFFFF
+            self._als1 = als_data & 0xFFFF
 
             self._ratio = (
                 self._als1 * 100 / (self._als1 + self._als0)
