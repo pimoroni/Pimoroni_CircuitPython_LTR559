@@ -2,5 +2,8 @@
 #
 # SPDX-License-Identifier: Unlicense
 
+[build-system]
+requires = ["setuptools>=30.3.0", "wheel", "setuptools_scm"]
+
 [tool.black]
 target-version = ['py35']
